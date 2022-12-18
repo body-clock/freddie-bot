@@ -6,7 +6,6 @@ import tweepy
 import boto3
 
 genius_user_token = os.environ['GENIUS_USER_TOKEN']
-genius = Genius(genius_user_token)
 
 
 def clean_lyrics(input_list):
@@ -32,9 +31,11 @@ def get_cat_image():
 with open('songs.csv', 'r') as fil:
     songs = [line.rstrip('\n') for line in fil]
 
-# song = genius.search_song("FUCK WHAT YOU CLAIM", "Freddie Dredd")
+genius = Genius(genius_user_token)
 song = genius.search_song(random.choice(songs), "Freddie Dredd")
+
 lyrics = song.lyrics
 lyrics_list = clean_lyrics(str.splitlines(lyrics))
+
 print(select_lyrics(lyrics_list))
 get_cat_image()
