@@ -22,36 +22,58 @@ auth.set_access_token(twitter_access_token, twitter_access_secret)
 api = tweepy.API(auth)
 
 
-def clean_lyrics(input_list):
-    input_list[:] = [lyric for lyric in input_list if lyric != '' and '[' not in lyric]
-    del input_list[-1]
-    return input_list
+def clean_lyrics(dirty_lyric_list):
+    """
+    :param dirty_lyric_list: dirty list of lyrics
+    1. remove values with empty strings and brackets
+    2. delete the last element
+    :return cleaned up list of lyrics
+    """
+    dirty_lyric_list[:] = [lyric for lyric in dirty_lyric_list if lyric != '' and '[' not in lyric]
+    clean_lyric_list = [lyric for lyric in dirty_lyric_list if lyric != '' and '[' not in lyric]
+    del clean_lyric_list[-1]
+    return clean_lyric_list
 
 
-def select_lyrics(input_list):
-    first_lyric = random.choice(input_list)
-    if input_list.index(first_lyric) != (len(input_list) - 1):
-        second_lyric = input_list[input_list.index(first_lyric) + 1]
+def select_lyrics(clean_lyric_list):
+    """
+    :param clean_lyric_list: clean list of lyrics
+    1. Choose a first lyric from the list
+    2. Choose a second lyric as long as the first lyric is not the last lyric in the list
+    :return final lyric string that can be used in the tweet
+    """
+    first_lyric = random.choice(clean_lyric_list)
+    if clean_lyric_list.index(first_lyric) != (len(clean_lyric_list) - 1):
+        second_lyric = clean_lyric_list[clean_lyric_list.index(first_lyric) + 1]
         return first_lyric + '\n' + second_lyric
     else:
         return first_lyric
 
 
 def get_cat_image_url():
+    """Get URL for a random cat image"""
     response = requests.get(f'https://api.thecatapi.com/v1/images/search').json()[0]
     print(response)
     return response['url']
 
 
-def get_ext_from_url(input_url):
-    path = urlparse(input_url).path
+def get_ext_from_url(url):
+    """Gets a file extension from a URL"""
+    path = urlparse(url).path
     ext = os.path.splitext(path)[1]
     return ext
 
 
-def download_cat_image(input_url):
-    ext = get_ext_from_url(input_url)
-    img_data = requests.get(input_url, stream=True).content
+def download_cat_image(cat_image_url):
+    """
+    :param cat_image_url: URL for the cat image
+    1. Downloads the image into memory
+    2. Connects and uploads image to s3 bucket
+    3. Downloads image from bucket into /tmp/ directory
+    4. Deletes image from s3
+    """
+    ext = get_ext_from_url(cat_image_url)
+    img_data = requests.get(cat_image_url, stream=True).content
     img = BytesIO(img_data)
     # connect to s3 bucket
     bucket = 'wiki-diptych-bucket'
@@ -71,6 +93,11 @@ def download_cat_image(input_url):
 
 
 def download_csv_from_aws(bucket_name, file_name, file_path):
+    """
+    :param bucket_name: the name of the s3 bucket that we download from
+    :param file_name: the name of the file we want to download
+    :param file_path: the path that we want to download the file to
+    """
     s3_resource = boto3.resource('s3',
                                  aws_access_key_id=aws_access_key_id,
                                  aws_secret_access_key=aws_secret_access_key)
