@@ -8,8 +8,6 @@ import boto3
 genius_user_token = os.environ['GENIUS_USER_TOKEN']
 genius = Genius(genius_user_token)
 
-kitty_key = os.environ['KITTY_KEY']
-
 
 def clean_lyrics(input_list):
     input_list[:] = [lyric for lyric in input_list if lyric != '' and '[' not in lyric]
