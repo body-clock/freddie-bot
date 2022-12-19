@@ -1,6 +1,6 @@
 # Roadmap
- - [ ] Break up big functions into smaller functions
-   - [ ] `download_cat_image`
+ - [x] Break up big functions into smaller functions
+   - [x] `download_cat_image`
      - This function does a lot more than the name suggests. We should have separate functions for each of the steps that this function executes.
  - [ ] Refactor code into classes
    - [ ] Lyrics
