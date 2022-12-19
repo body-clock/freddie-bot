@@ -25,61 +25,6 @@ auth.set_access_token(twitter_access_token, twitter_access_secret)
 api = tweepy.API(auth)
 
 
-def clean_lyrics(dirty_lyric_list):
-    """Remove list values with empty strings and brackets and delete the last element"""
-    dirty_lyric_list[:] = [lyric for lyric in dirty_lyric_list if lyric != '' and '[' not in lyric]
-    clean_lyric_list = [lyric for lyric in dirty_lyric_list if lyric != '' and '[' not in lyric]
-    # we delete the last element of the list because it often contains unnecessary text from the source HTML
-    del clean_lyric_list[-1]
-    return clean_lyric_list
-
-
-def select_lyrics(clean_lyric_list):
-    """
-    :param clean_lyric_list: clean list of lyrics
-    1. Choose a first lyric from the list
-    2. Choose a second lyric as long as the first lyric is not the last lyric in the list
-    :return final lyric string that can be used in the tweet
-    """
-    first_lyric = random.choice(clean_lyric_list)
-    if clean_lyric_list.index(first_lyric) != (len(clean_lyric_list) - 1):
-        second_lyric = clean_lyric_list[clean_lyric_list.index(first_lyric) + 1]
-        return first_lyric + '\n' + second_lyric
-    else:
-        return first_lyric
-
-
-def get_cat_image_url():
-    """Get URL for a random cat image"""
-    response = requests.get(f'https://api.thecatapi.com/v1/images/search').json()[0]
-    return response['url']
-
-
-def get_ext_from_url(url):
-    """Gets a file extension from a URL"""
-    path = urlparse(url).path
-    ext = os.path.splitext(path)[1]
-    return ext
-
-
-def upload_image_to_s3(image, bucket, image_name):
-    """Upload image to s3 bucket"""
-    s3_client.upload_fileobj(image, bucket, image_name)
-
-
-def download_image_from_s3(bucket, image_name, download_path):
-    """Download image into lambda /tmp/ directory"""
-    s3_resource = boto3.resource('s3',
-                                 aws_access_key_id=aws_access_key_id,
-                                 aws_secret_access_key=aws_secret_access_key)
-    s3_resource.Bucket(bucket).download_file(image_name, download_path)
-
-
-def delete_image_from_s3(bucket, image_name):
-    """Delete image from s3 bucket"""
-    s3.delete_object(Bucket=bucket, Key=image_name)
-
-
 def download_csv_from_aws(bucket_name, file_name, file_path):
     """Download a CSV from AWS to a path"""
     s3_resource = boto3.resource('s3',
@@ -103,11 +48,62 @@ def pick_random_song(songs_list, artist):
     return song
 
 
+def clean_lyrics(dirty_lyric_list):
+    """Remove list values with empty strings and brackets and delete the last element"""
+    clean_lyric_list = [lyric for lyric in dirty_lyric_list if lyric != '' and '[' not in lyric]
+    # we delete the last element of the list because it often contains unnecessary text from the source HTML
+    del clean_lyric_list[-1]
+    return clean_lyric_list
+
+
+def select_lyrics(clean_lyric_list):
+    """Pick lyrics from the cleaned up list of lyrics"""
+    first_lyric = random.choice(clean_lyric_list)
+    # the first lyric will sometimes be the last element of the list, so we need to make sure that
+    # we don't pick the next element in the list if that is the case (because it doesn't exist)
+    if clean_lyric_list.index(first_lyric) != (len(clean_lyric_list) - 1):
+        second_lyric = clean_lyric_list[clean_lyric_list.index(first_lyric) + 1]
+        return first_lyric + '\n' + second_lyric
+    else:
+        return first_lyric
+
+
+def get_cat_image_url():
+    """Get URL for a random cat image"""
+    response = requests.get(f'https://api.thecatapi.com/v1/images/search').json()[0]
+    return response['url']
+
+
+def get_ext_from_url(url):
+    """Gets a file extension from a URL"""
+    path = urlparse(url).path
+    ext = os.path.splitext(path)[1]
+    return ext
+
+
 def download_image_to_memory(url):
     """Use BytesIO to download an image from URL into memory"""
     img_data = requests.get(url, stream=True).content
     img = BytesIO(img_data)
     return img
+
+
+def upload_image_to_s3(image, bucket, image_name):
+    """Upload image to s3 bucket"""
+    s3_client.upload_fileobj(image, bucket, image_name)
+
+
+def download_image_from_s3(bucket, image_name, download_path):
+    """Download image into lambda /tmp/ directory"""
+    s3_resource = boto3.resource('s3',
+                                 aws_access_key_id=aws_access_key_id,
+                                 aws_secret_access_key=aws_secret_access_key)
+    s3_resource.Bucket(bucket).download_file(image_name, download_path)
+
+
+def delete_image_from_s3(bucket, image_name):
+    """Delete image from s3 bucket"""
+    s3.delete_object(Bucket=bucket, Key=image_name)
 
 
 def lambda_handler(event, context):
