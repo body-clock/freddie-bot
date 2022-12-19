@@ -16,6 +16,9 @@ twitter_access_secret = os.environ["TWITTER_ACCESS_SECRET"]
 
 aws_access_key_id = os.environ['AWS_ID']
 aws_secret_access_key = os.environ['AWS_SECRET']
+s3_client = s3 = boto3.client('s3',
+                              aws_access_key_id=aws_access_key_id,
+                              aws_secret_access_key=aws_secret_access_key)
 
 auth = tweepy.OAuthHandler(twitter_consumer_key, twitter_consumer_secret)
 auth.set_access_token(twitter_access_token, twitter_access_secret)
@@ -23,14 +26,10 @@ api = tweepy.API(auth)
 
 
 def clean_lyrics(dirty_lyric_list):
-    """
-    :param dirty_lyric_list: dirty list of lyrics
-    1. remove values with empty strings and brackets
-    2. delete the last element
-    :return cleaned up list of lyrics
-    """
+    """Remove list values with empty strings and brackets and delete the last element"""
     dirty_lyric_list[:] = [lyric for lyric in dirty_lyric_list if lyric != '' and '[' not in lyric]
     clean_lyric_list = [lyric for lyric in dirty_lyric_list if lyric != '' and '[' not in lyric]
+    # we delete the last element of the list because it often contains unnecessary text from the source HTML
     del clean_lyric_list[-1]
     return clean_lyric_list
 
@@ -53,7 +52,6 @@ def select_lyrics(clean_lyric_list):
 def get_cat_image_url():
     """Get URL for a random cat image"""
     response = requests.get(f'https://api.thecatapi.com/v1/images/search').json()[0]
-    print(response)
     return response['url']
 
 
@@ -64,60 +62,77 @@ def get_ext_from_url(url):
     return ext
 
 
-def download_cat_image(cat_image_url):
-    """
-    :param cat_image_url: URL for the cat image
-    1. Downloads the image into memory
-    2. Connects and uploads image to s3 bucket
-    3. Downloads image from bucket into /tmp/ directory
-    4. Deletes image from s3
-    """
-    ext = get_ext_from_url(cat_image_url)
-    img_data = requests.get(cat_image_url, stream=True).content
-    img = BytesIO(img_data)
-    # connect to s3 bucket
-    bucket = 'wiki-diptych-bucket'
-    s3 = boto3.client('s3',
-                      aws_access_key_id=aws_access_key_id,
-                      aws_secret_access_key=aws_secret_access_key)
-    # upload image to s3
-    img_name = f'image{ext}'
-    s3.upload_fileobj(img, bucket, img_name)
-    # download into lambda tmp directory
+def upload_image_to_s3(image, bucket, image_name):
+    """Upload image to s3 bucket"""
+    s3_client.upload_fileobj(image, bucket, image_name)
+
+
+def download_image_from_s3(bucket, image_name, download_path):
+    """Download image into lambda /tmp/ directory"""
     s3_resource = boto3.resource('s3',
                                  aws_access_key_id=aws_access_key_id,
                                  aws_secret_access_key=aws_secret_access_key)
-    s3_resource.Bucket(bucket).download_file(f'{img_name}', f'/tmp/{img_name}')
-    # delete from s3
-    s3.delete_object(Bucket=bucket, Key=img_name)
+    s3_resource.Bucket(bucket).download_file(image_name, download_path)
+
+
+def delete_image_from_s3(bucket, image_name):
+    """Delete image from s3 bucket"""
+    s3.delete_object(Bucket=bucket, Key=image_name)
 
 
 def download_csv_from_aws(bucket_name, file_name, file_path):
-    """
-    :param bucket_name: the name of the s3 bucket that we download from
-    :param file_name: the name of the file we want to download
-    :param file_path: the path that we want to download the file to
-    """
+    """Download a CSV from AWS to a path"""
     s3_resource = boto3.resource('s3',
                                  aws_access_key_id=aws_access_key_id,
                                  aws_secret_access_key=aws_secret_access_key)
     s3_resource.Bucket(bucket_name).download_file(file_name, file_path)
+    return file_path
+
+
+def create_list_from_csv(path):
+    """Turn a CSV into a Python list"""
+    with open(path, 'r') as fil:
+        songs = [line.rstrip('\n') for line in fil]
+        return songs
+
+
+def pick_random_song(songs_list, artist):
+    """Connect to Genius API and get a random song from artist"""
+    genius = Genius(genius_user_token)
+    song = genius.search_song(random.choice(songs_list), artist)
+    return song
+
+
+def download_image_to_memory(url):
+    """Use BytesIO to download an image from URL into memory"""
+    img_data = requests.get(url, stream=True).content
+    img = BytesIO(img_data)
+    return img
 
 
 def lambda_handler(event, context):
-    download_csv_from_aws('freddie-bot', 'songs.csv', '/tmp/songs.csv')
+    """Called by AWS Lambda function"""
+    bucket_name = 'freddie-bot'
+    artist = "Freddie Dredd"
 
-    with open('/tmp/songs.csv', 'r') as fil:
-        songs = [line.rstrip('\n') for line in fil]
+    songs_csv_path = download_csv_from_aws(bucket_name, 'songs.csv', '/tmp/songs.csv')
+    songs_list = create_list_from_csv(songs_csv_path)
+    random_song = pick_random_song(songs_list, artist)
 
-    genius = Genius(genius_user_token)
-    song = genius.search_song(random.choice(songs), "Freddie Dredd")
-
-    lyrics = song.lyrics
-    lyrics_list = clean_lyrics(str.splitlines(lyrics))
+    lyrics = random_song.lyrics
+    dirty_lyrics_list = str.splitlines(lyrics)
+    clean_lyrics_list = clean_lyrics(dirty_lyrics_list)
+    final_lyrics = select_lyrics(clean_lyrics_list)
+    print(final_lyrics)
 
     url = get_cat_image_url()
-    download_cat_image(url)
+    print(url)
+    cat_image_in_memory = download_image_to_memory(url)
 
-    final_lyrics = select_lyrics(lyrics_list)
-    api.update_status_with_media(final_lyrics, f'/tmp/image{get_ext_from_url(url)}')
+    ext = get_ext_from_url(url)
+    image_file_name = f'cat{ext}'  #
+    upload_image_to_s3(cat_image_in_memory, bucket_name, image_file_name)
+    download_image_from_s3(bucket_name, image_file_name, f'/tmp/{image_file_name}')
+    delete_image_from_s3(bucket_name, image_file_name)
+
+    api.update_status_with_media(final_lyrics, f'/tmp/{image_file_name}')
