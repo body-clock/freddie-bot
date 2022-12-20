@@ -50,10 +50,8 @@ def pick_random_song(songs_list, artist):
 
 def clean_lyrics(dirty_lyric_list):
     """Remove list values with empty strings and brackets and delete the last element"""
-    clean_lyric_list = [lyric for lyric in dirty_lyric_list if lyric != '' and '[' not in lyric]
-    # we delete the last element of the list because it often contains unnecessary text from the source HTML
-    del clean_lyric_list[-1]
-    return clean_lyric_list
+    clean_lyric_list = [lyric for lyric in dirty_lyric_list if lyric and '[' not in lyric]
+    return clean_lyric_list[:-1]
 
 
 def select_lyrics(clean_lyric_list):
@@ -66,6 +64,13 @@ def select_lyrics(clean_lyric_list):
         return first_lyric + '\n' + second_lyric
     else:
         return first_lyric
+
+def select_lyrics(clean_lyric_list):
+    """Pick lyrics from the cleaned up list of lyrics"""
+    first_index = random.randint(0, len(clean_lyric_list) - 2)
+    first_lyric = clean_lyric_list[first_index]
+    second_lyric = clean_lyric_list[first_index + 1]
+    return f"{first_lyric}\n{second_lyric}"
 
 
 def get_cat_image_url():
