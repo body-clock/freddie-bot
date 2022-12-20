@@ -1,5 +1,5 @@
 # freddie-bot
-A [dreddful little twitter bot](https://twitter.com/kitty_dredd) that brabs a random lyric from any Freddie Dredd song and attaches a random picture of a cat.
+A [dreddful little twitter bot](https://twitter.com/kitty_dredd) that grabs a random lyric from any Freddie Dredd song and attaches a random picture of a cat.
 
 ## How it works:
 1. Downloads a CSV of all Freddie Dredd Songs from s3 and creates a list from that CSV
