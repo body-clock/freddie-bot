@@ -56,17 +56,6 @@ def clean_lyrics(dirty_lyric_list):
 
 def select_lyrics(clean_lyric_list):
     """Pick lyrics from the cleaned up list of lyrics"""
-    first_lyric = random.choice(clean_lyric_list)
-    # the first lyric will sometimes be the last element of the list, so we need to make sure that
-    # we don't pick the next element in the list if that is the case (because it doesn't exist)
-    if clean_lyric_list.index(first_lyric) != (len(clean_lyric_list) - 1):
-        second_lyric = clean_lyric_list[clean_lyric_list.index(first_lyric) + 1]
-        return first_lyric + '\n' + second_lyric
-    else:
-        return first_lyric
-
-def select_lyrics(clean_lyric_list):
-    """Pick lyrics from the cleaned up list of lyrics"""
     first_index = random.randint(0, len(clean_lyric_list) - 2)
     first_lyric = clean_lyric_list[first_index]
     second_lyric = clean_lyric_list[first_index + 1]
