@@ -37,15 +37,13 @@ def download_csv_from_aws(bucket_name, file_name, file_path):
 def create_list_from_csv(path):
     """Turn a CSV into a Python list"""
     with open(path, 'r') as fil:
-        songs = [line.rstrip('\n') for line in fil]
-        return songs
+        return [line.rstrip('\n') for line in fil]
 
 
 def pick_random_song(songs_list, artist):
     """Connect to Genius API and get a random song from artist"""
     genius = Genius(genius_user_token)
-    song = genius.search_song(random.choice(songs_list), artist)
-    return song
+    return genius.search_song(random.choice(songs_list), artist)
 
 
 def clean_lyrics(dirty_lyric_list):
@@ -64,22 +62,19 @@ def select_lyrics(clean_lyric_list):
 
 def get_cat_image_url():
     """Get URL for a random cat image"""
-    response = requests.get(f'https://api.thecatapi.com/v1/images/search').json()[0]
-    return response['url']
+    return requests.get('https://api.thecatapi.com/v1/images/search').json()[0]['url']
 
 
 def get_ext_from_url(url):
     """Gets a file extension from a URL"""
     path = urlparse(url).path
-    ext = os.path.splitext(path)[1]
-    return ext
+    return os.path.splitext(path)[1]
 
 
 def download_image_to_memory(url):
     """Use BytesIO to download an image from URL into memory"""
     img_data = requests.get(url, stream=True).content
-    img = BytesIO(img_data)
-    return img
+    return BytesIO(img_data)
 
 
 def upload_image_to_s3(image, bucket, image_name):
