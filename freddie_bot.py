@@ -95,6 +95,7 @@ def delete_image_from_s3(bucket, image_name):
     s3.delete_object(Bucket=bucket, Key=image_name)
 
 
+# the lambda handler function
 def lambda_handler(event, context):
     """Called by AWS Lambda function"""
     bucket_name = 'freddie-bot'
