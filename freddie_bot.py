@@ -8,18 +8,20 @@ import requests
 import tweepy
 from lyricsgenius import Genius
 
-genius_user_token = os.environ['GENIUS_USER_TOKEN']
+genius_user_token = os.environ["GENIUS_USER_TOKEN"]
 
-twitter_consumer_key = os.environ['TWITTER_CONSUMER_KEY']
-twitter_consumer_secret = os.environ['TWITTER_CONSUMER_SECRET']
+twitter_consumer_key = os.environ["TWITTER_CONSUMER_KEY"]
+twitter_consumer_secret = os.environ["TWITTER_CONSUMER_SECRET"]
 twitter_access_token = os.environ["TWITTER_ACCESS_TOKEN"]
 twitter_access_secret = os.environ["TWITTER_ACCESS_SECRET"]
 
-aws_access_key_id = os.environ['AWS_ID']
-aws_secret_access_key = os.environ['AWS_SECRET']
-s3_client = s3 = boto3.client('s3',
-                              aws_access_key_id=aws_access_key_id,
-                              aws_secret_access_key=aws_secret_access_key)
+aws_access_key_id = os.environ["AWS_ID"]
+aws_secret_access_key = os.environ["AWS_SECRET"]
+s3_client = s3 = boto3.client(
+    "s3",
+    aws_access_key_id=aws_access_key_id,
+    aws_secret_access_key=aws_secret_access_key,
+)
 
 auth = tweepy.OAuthHandler(twitter_consumer_key, twitter_consumer_secret)
 auth.set_access_token(twitter_access_token, twitter_access_secret)
@@ -28,17 +30,19 @@ api = tweepy.API(auth)
 
 def download_csv_from_aws(bucket_name, file_name, file_path):
     """Download a CSV from AWS to a path"""
-    s3_resource = boto3.resource('s3',
-                                 aws_access_key_id=aws_access_key_id,
-                                 aws_secret_access_key=aws_secret_access_key)
+    s3_resource = boto3.resource(
+        "s3",
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+    )
     s3_resource.Bucket(bucket_name).download_file(file_name, file_path)
     return file_path
 
 
 def create_list_from_csv(path):
     """Turn a CSV into a Python list"""
-    with open(path, 'r') as fil:
-        return [line.rstrip('\n') for line in fil]
+    with open(path, "r") as fil:
+        return [line.rstrip("\n") for line in fil]
 
 
 def pick_random_song(songs_list, artist):
@@ -49,7 +53,9 @@ def pick_random_song(songs_list, artist):
 
 def clean_lyrics(dirty_lyric_list):
     """Remove list values with empty strings and brackets and delete the last element"""
-    clean_lyric_list = [lyric for lyric in dirty_lyric_list if lyric and '[' not in lyric]
+    clean_lyric_list = [
+        lyric for lyric in dirty_lyric_list if lyric and "[" not in lyric
+    ]
     return clean_lyric_list[:-1]
 
 
@@ -63,7 +69,7 @@ def select_lyrics(clean_lyric_list):
 
 def get_cat_image_url():
     """Get URL for a random cat image"""
-    return requests.get('https://api.thecatapi.com/v1/images/search').json()[0]['url']
+    return requests.get("https://api.thecatapi.com/v1/images/search").json()[0]["url"]
 
 
 def get_ext_from_url(url):
@@ -85,9 +91,11 @@ def upload_image_to_s3(image, bucket, image_name):
 
 def download_image_from_s3(bucket, image_name, download_path):
     """Download image into lambda /tmp/ directory"""
-    s3_resource = boto3.resource('s3',
-                                 aws_access_key_id=aws_access_key_id,
-                                 aws_secret_access_key=aws_secret_access_key)
+    s3_resource = boto3.resource(
+        "s3",
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+    )
     s3_resource.Bucket(bucket).download_file(image_name, download_path)
 
 
@@ -99,10 +107,10 @@ def delete_image_from_s3(bucket, image_name):
 # the lambda handler function
 def lambda_handler(event, context):
     """Called by AWS Lambda function"""
-    bucket_name = 'freddie-bot'
+    bucket_name = "freddie-bot"
     artist = "Freddie Dredd"
 
-    songs_csv_path = download_csv_from_aws(bucket_name, 'songs.csv', '/tmp/songs.csv')
+    songs_csv_path = download_csv_from_aws(bucket_name, "songs.csv", "/tmp/songs.csv")
     songs_list = create_list_from_csv(songs_csv_path)
     random_song = pick_random_song(songs_list, artist)
 
@@ -117,9 +125,9 @@ def lambda_handler(event, context):
     cat_image_in_memory = download_image_to_memory(url)
 
     ext = get_ext_from_url(url)
-    image_file_name = f'cat{ext}'  #
+    image_file_name = f"cat{ext}"  #
     upload_image_to_s3(cat_image_in_memory, bucket_name, image_file_name)
-    download_image_from_s3(bucket_name, image_file_name, f'/tmp/{image_file_name}')
+    download_image_from_s3(bucket_name, image_file_name, f"/tmp/{image_file_name}")
     delete_image_from_s3(bucket_name, image_file_name)
 
-    api.update_status_with_media(final_lyrics, f'/tmp/{image_file_name}')
+    api.update_status_with_media(final_lyrics, f"/tmp/{image_file_name}")
