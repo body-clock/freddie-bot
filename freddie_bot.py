@@ -1,11 +1,12 @@
-import random
 import os
-import requests
-from lyricsgenius import Genius
-from urllib.parse import urlparse
-import tweepy
-import boto3
+import random
 from io import BytesIO
+from urllib.parse import urlparse
+
+import boto3
+import requests
+import tweepy
+from lyricsgenius import Genius
 
 genius_user_token = os.environ['GENIUS_USER_TOKEN']
 
