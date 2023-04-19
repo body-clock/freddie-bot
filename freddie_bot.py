@@ -52,9 +52,12 @@ def pick_random_song(songs_list, artist):
 
 
 def clean_lyrics(dirty_lyric_list):
-    """Remove list values with empty strings and brackets and delete the last element"""
+    """Remove list values with empty strings, brackets, and lines with 'nigga' and delete the last element"""
     clean_lyric_list = [
-        lyric for lyric in dirty_lyric_list if lyric and "[" not in lyric
+        lyric for lyric in dirty_lyric_list if
+        lyric and
+        "[" not in lyric and
+        "nigga" not in lyric.lower()
     ]
     return clean_lyric_list[:-1]
 
